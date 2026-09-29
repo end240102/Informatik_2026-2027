@@ -1,0 +1,11 @@
+{
+  "nodeModulesDir": "none",
+  "tasks": {
+    "run": "deno run --allow-read --allow-write main.ts",
+    "test": "deno test --allow-read --allow-write",
+    "seed": "deno eval \"import { DatabaseSync } from 'node:sqlite'; const sql = Deno.readTextFileSync('seed-musik-mini.sql'); new DatabaseSync('musik-mini.db').exec(sql); new DatabaseSync('test-mini.db').exec(sql); console.log('Database seeded successfully.');\""
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1"
+  }
+}
