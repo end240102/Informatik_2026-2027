@@ -39,3 +39,32 @@ Deno.test("labels mit mehr als einem kuenstler", () => {
   assertEquals(rows.map((r) => r.name), ["Nordklang", "Suedton"]);
   db.close();
 });
+
+Deno.test("kuenstlerpaare desselben labels (self-join)", () => {
+  const db = openSeed();
+  const rows = db.prepare(`
+    SELECT x.name AS a, y.name AS b, l.name AS label
+    FROM kuenstler x
+    JOIN kuenstler y ON x.label_id = y.label_id AND x.id < y.id
+    JOIN label l ON l.id = x.label_id
+  `).all() as { a: string; b: string; label: string }[];
+  assertEquals(rows.length, 4);
+  assertEquals(rows[0], { a: "Auer", b: "Beck", label: "Nordklang" });
+  db.close();
+});
+
+Deno.test("kombinierte abfrage where und having", () => {
+  const db = openSeed();
+  const rows = db.prepare(`
+    SELECT k.name, COUNT(*) AS n
+    FROM kuenstler k JOIN song s ON s.kuenstler_id = k.id
+    WHERE s.dauer_sek > 200
+    GROUP BY k.id
+    HAVING COUNT(*) >= 2
+  `).all() as { name: string; n: number }[];
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0].name, "Auer");
+  assertEquals(rows[0].n, 2);
+  db.close();
+});
+
