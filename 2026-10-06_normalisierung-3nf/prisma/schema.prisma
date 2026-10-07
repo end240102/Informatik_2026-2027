@@ -1,0 +1,110 @@
+// prisma/schema.prisma — Normalisierung 1NF–3NF in Prisma 7
+// Fach: INFI · 3AHWII · Prof. Georg Ernst Graf
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// -----------------------------------------------------------------------------
+// 1NF: Beseitigung von Listen in Zellen & Wiederholgruppen
+// -----------------------------------------------------------------------------
+
+// 1NF-Fix A: Atomare Hobbys als Kindtabelle statt 'Lesen, Schwimmen'
+model Kunde {
+  id     Int     @id @default(autoincrement())
+  name   String
+  hobbys Hobby[]
+}
+
+model Hobby {
+  kundeId Int
+  hobby   String
+  kunde   Kunde  @relation(fields: [kundeId], references: [id], onDelete: Cascade)
+
+  @@id([kundeId, hobby])
+}
+
+// -----------------------------------------------------------------------------
+// 2NF: Beseitigung partieller Abhängigkeiten (zusammengesetzter PK)
+// -----------------------------------------------------------------------------
+
+// 2NF-Fix A: Zwischentabelle SongPlaylist hält nur die Beziehung.
+// Song-Titel und Playlist-Name sind eigene Entitäten.
+model Song {
+  id        Int            @id @default(autoincrement())
+  titel     String
+  dauerSek  Int
+  playlists SongPlaylist[]
+}
+
+model Playlist {
+  id    Int            @id @default(autoincrement())
+  name  String
+  songs SongPlaylist[]
+}
+
+model SongPlaylist {
+  songId     Int
+  playlistId Int
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@id([songId, playlistId])
+}
+
+// 2NF-Fix B: Bestellposition mit ausgelagertem Produkt
+// produkt_name hängt nur an produkt_nr, nicht an (bestell_nr, position)
+model Produkt {
+  produktNr  Int               @id @default(autoincrement())
+  name       String
+  positionen Bestellposition[]
+}
+
+model Bestellposition {
+  bestellNr  Int
+  position   Int
+  produktNr  Int
+  menge      Int
+  bestellung Bestellung @relation(fields: [bestellNr], references: [bestellNr], onDelete: Cascade)
+  produkt    Produkt    @relation(fields: [produktNr], references: [produktNr])
+
+  @@id([bestellNr, position])
+}
+
+// -----------------------------------------------------------------------------
+// 3NF: Beseitigung transitiver Abhängigkeiten (Nichtschlüssel -> Nichtschlüssel)
+// -----------------------------------------------------------------------------
+
+// 3NF-Fix A: Bestellung -> PLZ -> Ort (Ort wird in Plz ausgelagert)
+model Plz {
+  plz          String       @id
+  ort          String
+  bestellungen Bestellung[]
+}
+
+model Bestellung {
+  bestellNr  Int               @id
+  kunde      String
+  plz        String
+  ortRef     Plz               @relation(fields: [plz], references: [plz])
+  positionen Bestellposition[]
+}
+
+// 3NF-Fix B (SWP-Crossover): Konto -> BLZ -> Bankname (Bankname wird in Bank ausgelagert)
+model Bank {
+  blz      String  @id
+  bankname String
+  konten   Konto[]
+}
+
+model Konto {
+  iban    String @id
+  inhaber String
+  blz     String
+  bank    Bank   @relation(fields: [blz], references: [blz])
+}
